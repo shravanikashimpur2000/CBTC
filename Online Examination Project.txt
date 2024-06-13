@@ -1,0 +1,284 @@
+import java.io.*;
+import java.util.*;
+
+class User implements Serializable {
+    private String username;
+    private String password;
+    private String fullName;
+
+    public User(String username, String password, String fullName) {
+        this.username = username;
+        this.password = password;
+        this.fullName = fullName;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean authenticate(String password) {
+        return this.password.equals(password);
+    }
+
+    public void updateProfile(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public void updatePassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    @Override
+    public String toString() {
+        return "Username: " + username + ", Full Name: " + fullName;
+    }
+}
+
+class Exam {
+    private Map<String, String> questions;
+    private Map<String, String> answers;
+    private long duration;
+    private Timer timer;
+    private boolean isSubmitted;
+
+    public Exam(long duration) {
+        this.duration = duration;
+        this.isSubmitted = false;
+        questions = new LinkedHashMap<>();
+        answers = new HashMap<>();
+        populateQuestions();
+    }
+
+    private void populateQuestions() {
+        questions.put("1. What is the capital of France?", "A. Paris B. London C. Rome D. Berlin");
+        questions.put("2. What is 2 + 2?", "A. 3 B. 4 C. 5 D. 6");
+        // Add more questions as needed
+    }
+
+    public void displayQuestions() {
+        for (String question : questions.keySet()) {
+            System.out.println(question);
+            System.out.println(questions.get(question));
+        }
+    }
+
+    public void selectAnswer(String question, String answer) {
+        if (questions.containsKey(question)) {
+            answers.put(question, answer);
+        } else {
+            System.out.println("Invalid question number.");
+        }
+    }
+
+    public void startExam() {
+        timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                submitExam();
+            }
+        }, duration);
+    }
+
+    public void submitExam() {
+        if (!isSubmitted) {
+            isSubmitted = true;
+            timer.cancel();
+            System.out.println("Exam submitted successfully.");
+            // Calculate and display results if needed
+        }
+    }
+
+    public boolean isSubmitted() {
+        return isSubmitted;
+    }
+}
+
+class OnlineExamination {
+    private Map<String, User> users;
+    private User currentUser;
+    private Exam currentExam;
+    private final String dataFile = "users.dat";
+
+    public OnlineExamination() {
+        users = new HashMap<>();
+        loadUsers();
+        currentUser = null;
+        currentExam = null;
+    }
+
+    public void registerUser(String username, String password, String fullName) {
+        if (!users.containsKey(username)) {
+            User user = new User(username, password, fullName);
+            users.put(username, user);
+            saveUsers();
+        } else {
+            System.out.println("Username already exists.");
+        }
+    }
+
+    public boolean loginUser(String username, String password) {
+        User user = users.get(username);
+        if (user != null && user.authenticate(password)) {
+            currentUser = user;
+            return true;
+        }
+        return false;
+    }
+
+    public void logoutUser() {
+        currentUser = null;
+    }
+
+    public void updateProfile(String fullName) {
+        if (currentUser != null) {
+            currentUser.updateProfile(fullName);
+            saveUsers();
+        } else {
+            System.out.println("No user logged in.");
+        }
+    }
+
+    public void updatePassword(String newPassword) {
+        if (currentUser != null) {
+            currentUser.updatePassword(newPassword);
+            saveUsers();
+        } else {
+            System.out.println("No user logged in.");
+        }
+    }
+
+    public void startExam(long duration) {
+        if (currentUser != null) {
+            currentExam = new Exam(duration);
+            currentExam.startExam();
+        } else {
+            System.out.println("No user logged in.");
+        }
+    }
+
+    public void answerQuestion(String question, String answer) {
+        if (currentExam != null && !currentExam.isSubmitted()) {
+            currentExam.selectAnswer(question, answer);
+        } else {
+            System.out.println("No exam in progress or exam already submitted.");
+        }
+    }
+
+    public void submitExam() {
+        if (currentExam != null) {
+            currentExam.submitExam();
+        } else {
+            System.out.println("No exam in progress.");
+        }
+    }
+
+    public void displayQuestions() {
+        if (currentExam != null) {
+            currentExam.displayQuestions();
+        } else {
+            System.out.println("No exam in progress.");
+        }
+    }
+
+    private void saveUsers() {
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(dataFile))) {
+            out.writeObject(users);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void loadUsers() {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(dataFile))) {
+            users = (Map<String, User>) in.readObject();
+        } catch (FileNotFoundException e) {
+            users = new HashMap<>();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public class OnlineExamSystem {
+    public static void main(String[] args) {
+        OnlineExamination system = new OnlineExamination();
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\nOnline Examination System");
+            System.out.println("1. Register");
+            System.out.println("2. Login");
+            System.out.println("3. Update Profile");
+            System.out.println("4. Update Password");
+            System.out.println("5. Start Exam");
+            System.out.println("6. Answer Question");
+            System.out.println("7. Submit Exam");
+            System.out.println("8. Logout");
+            System.out.println("9. Exit");
+            System.out.print("Choose an option: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine();  // Consume newline
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter username: ");
+                    String username = scanner.nextLine();
+                    System.out.print("Enter password: ");
+                    String password = scanner.nextLine();
+                    System.out.print("Enter full name: ");
+                    String fullName = scanner.nextLine();
+                    system.registerUser(username, password, fullName);
+                    break;
+                case 2:
+                    System.out.print("Enter username: ");
+                    username = scanner.nextLine();
+                    System.out.print("Enter password: ");
+                    password = scanner.nextLine();
+                    if (system.loginUser(username, password)) {
+                        System.out.println("Login successful.");
+                    } else {
+                        System.out.println("Invalid username or password.");
+                    }
+                    break;
+                case 3:
+                    System.out.print("Enter new full name: ");
+                    fullName = scanner.nextLine();
+                    system.updateProfile(fullName);
+                    break;
+                case 4:
+                    System.out.print("Enter new password: ");
+                    password = scanner.nextLine();
+                    system.updatePassword(password);
+                    break;
+                case 5:
+                    System.out.print("Enter exam duration (in seconds): ");
+                    long duration = scanner.nextLong() * 1000;
+                    system.startExam(duration);
+                    system.displayQuestions();
+                    break;
+                case 6:
+                    System.out.print("Enter question number: ");
+                    String question = scanner.nextLine();
+                    System.out.print("Enter your answer (A/B/C/D): ");
+                    String answer = scanner.nextLine();
+                    system.answerQuestion(question, answer);
+                    break;
+                case 7:
+                    system.submitExam();
+                    break;
+                case 8:
+                    system.logoutUser();
+                    System.out.println("Logged out successfully.");
+                    break;
+                case 9:
+                    scanner.close();
+                    System.out.println("Goodbye!");
+                    return;
+                default:
+                    System.out.println("Invalid option. Please try again.");
+            }
+        }
+    }
+}
